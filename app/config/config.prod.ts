@@ -8,7 +8,7 @@
 export default {
   //http:// 192.168.1.145:3000/v1/auth/login
   // API_URL: "http://server.littlepea.site:3000/v1/",
-  API_URL: "http://192.168.1.145:3000/v1/",
+  API_URL: "http://192.168.1.144:3000/v1/",
 }
 /**
  * 

@@ -14,7 +14,8 @@ import moment from "moment"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as zod from "zod"
-
+import { Calendar, CalendarProvider, DateData } from "react-native-calendars"
+import { dateYMD } from "../utils/common"
 type textProps = {
   fieldName: string
   isRequired?: boolean
@@ -45,6 +46,7 @@ export const Explain = observer(function Division(props: DivisionProps) {
   const netInfo = useNetInfo()
   const toast = useToast()
   const [openMenu, setOpenMenu] = React.useState(false)
+  const [daySelected, setDaySelected] = React.useState<string>(dateYMD(new Date().getTime()))
   const validationSchema = React.useMemo(
     () =>
       zod.object({
@@ -57,6 +59,7 @@ export const Explain = observer(function Division(props: DivisionProps) {
         place: zod.string({ required_error: "Địa điểm là trường bắt buộc" }).trim().nonempty({
           message: "Địa điểm không được để trống",
         }),
+        dateExplain: zod.number({ required_error: "Chọn ngày giải trình" }),
         decription: zod.string().optional(),
       }),
     [],
@@ -67,7 +70,7 @@ export const Explain = observer(function Division(props: DivisionProps) {
     getValues,
     formState: { errors },
     reset,
-    resetField,
+    setValue,
   } = useForm({
     mode: "onChange",
     defaultValues: {
@@ -75,6 +78,7 @@ export const Explain = observer(function Division(props: DivisionProps) {
       status: undefined,
       place: undefined,
       decription: undefined,
+      dateExplain: moment().format("x"),
     },
     resolver: zodResolver(validationSchema),
   })
@@ -97,7 +101,14 @@ export const Explain = observer(function Division(props: DivisionProps) {
       getData()
     }
   }, [netInfo.isConnected])
-
+  const onDayPress = React.useCallback(
+    (date) => {
+      console.log(date)
+      setValue("dateExplain", date?.timestamp)
+      setDaySelected(date?.dateString)
+    },
+    [setValue, setDaySelected],
+  )
   const addExplainUser = React.useCallback(async () => {
     const selectedPlace = listPlaces.find((item) => {
       return item?.id === getValues("place")
@@ -107,10 +118,10 @@ export const Explain = observer(function Division(props: DivisionProps) {
         getValues("reason"),
         idUser,
         name_user,
-        getValues("decription"),
+        getValues("decription") ?? "",
         selectedPlace?.id,
         selectedPlace?.name,
-        parseInt(moment().format("x")),
+        getValues("dateExplain") as unknown as number,
         getValues("status"),
         selectedPlace?.lat,
         selectedPlace?.long,
@@ -146,7 +157,17 @@ export const Explain = observer(function Division(props: DivisionProps) {
         duration: 3000,
       })
     }
-  }, [idUser, name_user, getValues, addExplain])
+  }, [
+    idUser,
+    name_user,
+    getValues("reason"),
+    getValues("decription"),
+    getValues("dateExplain"),
+    getValues("status"),
+    reset,
+    addExplain,
+    toast,
+  ])
 
   return (
     <View style={$container}>
@@ -260,6 +281,7 @@ export const Explain = observer(function Division(props: DivisionProps) {
               onValueChange={onChange}
             >
               <Select.Item label="Lỗi vị trí" value="Lỗi vị trí" />
+              <Select.Item label="Quên chấm công" value="Quên chấm công" />
               <Select.Item label="Không lấy được địa chỉ MAC" value="Không lấy được địa chỉ MAC" />
               <Select.Item label="Lỗi mạng" value="Lỗi mạng" />
               <Select.Item label="Không lấy được địa chỉ IP" value="Không lấy được địa chỉ IP" />
@@ -292,6 +314,38 @@ export const Explain = observer(function Division(props: DivisionProps) {
         name="place"
       />
       <Text style={{ color: "red", fontSize: 14 }}>{errors.place?.message as string}</Text>
+
+      <RequiredText props={{ fieldName: "Chọn ngày giải trình :", isRequired: true }} />
+      <Controller
+        control={control}
+        render={({ field: { value, onChange } }) => {
+          return (
+            <CalendarProvider
+              date={`${value}`}
+              style={{ borderWidth: 2, borderColor: "blue", borderRadius: 5 }}
+            >
+              <Calendar
+                onDayPress={onDayPress}
+                markedDates={{
+                  [daySelected]: {
+                    selected: true,
+                    disableTouchEvent: true,
+                    selectedColor: "#3288f2",
+                  },
+                }}
+                maxDate={moment().format("YYYY-MM-DD")}
+                // renderHeader={(date) => {
+                //   console.log(date)
+                //   return <Text> Tháng {moment(date).format("MM-YYYY")}</Text>
+                // }}
+                // enableSwipeMonths={true}
+              />
+            </CalendarProvider>
+          )
+        }}
+        name="place"
+      />
+      <Text style={{ color: "red", fontSize: 14 }}>{errors.dateExplain?.message as string}</Text>
 
       <RequiredText props={{ fieldName: "Mô tả :", isRequired: false }} />
       <Controller

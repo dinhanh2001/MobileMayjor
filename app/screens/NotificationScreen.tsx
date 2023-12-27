@@ -48,7 +48,6 @@ export const NotificationScreen: FC<StackScreenProps<AppStackScreenProps, "Notif
       async (page: number) => {
         try {
           const data = await getNotifications(id, page, PAGE_LIMIT)
-          console.log(data)
           setList(data)
         } catch (e) {
           throw new Error("fetch data Notification failt")

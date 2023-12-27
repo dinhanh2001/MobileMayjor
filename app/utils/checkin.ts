@@ -5,7 +5,6 @@ import moment from "moment"
 
 export const allowCheckin = (place: object) => {
   const currentTime = new Date().getTime()
-  console.log("place in allowCheckin function in ultil: ", place)
 
   interface timeCheckin {
     pass?: boolean

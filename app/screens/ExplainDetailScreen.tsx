@@ -141,7 +141,13 @@ export const ExplainDetailScreen: FC<StackScreenProps<AppStackScreenProps, "Expl
                 <MaterialIcons name="radio-button-checked" size={24} color="black" />
                 <Text style={{ fontWeight: "700", marginLeft: 5 }}>Trạng thái đơn :</Text>
               </HStack>
-              <Text>{place["active"] === true ? "Đã duyệt" : "Chưa duyệt"}</Text>
+              <Text>
+                {place["active"] === true
+                  ? "Đã duyệt"
+                  : place["approval_name"]
+                  ? "Không duyệt"
+                  : "Chưa duyệt"}
+              </Text>
             </HStack>
             <HStack style={{ justifyContent: "space-between", paddingBottom: 10 }}>
               <HStack>

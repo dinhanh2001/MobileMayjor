@@ -1,7 +1,8 @@
 import { Instance, SnapshotIn, SnapshotOut, types, flow } from "mobx-state-tree"
 import { withSetPropAction } from "./helpers/withSetPropAction"
 import { apiUser } from "../services/api/api.user"
-import { load, remove } from "../utils/storage"
+import { load } from "../utils/storage"
+import moment from "moment"
 /**
  * Model description here for TypeScript hints.
  */
@@ -29,10 +30,22 @@ export const UserModel = types
     org_ids: types.maybe(types.array(types.string)),
     role: types.maybe(types.string),
     avatar: types.maybe(types.frozen()),
+    checkInStatus: types.optional(types.string, "out"),
+    dateLastCheckin: types.maybe(types.frozen()),
   })
   .actions(withSetPropAction)
   .views((self) => ({})) // eslint-disable-line @typescript-eslint/no-unused-vars
   .actions((self) => ({
+    setDateLastCheckIn: flow(function* () {
+      if (!moment(self.dateLastCheckin).isSame(new Date(), "day")) {
+        self.checkInStatus = "out"
+        self.dateLastCheckin = new Date()
+      }
+    }),
+    setCheckIn: flow(function* (status: string) {
+      // console.log(status, "setCheckIn")
+      self.checkInStatus = status
+    }),
     getUserByOrg: flow(function* () {
       let access = yield load("AccessToken")
       const org_id = yield load("organizationId")
@@ -105,7 +118,9 @@ export const UserModel = types
       self.avatar = null
       self.role = null
     }),
-  })) // eslint-disable-line @typescript-eslint/no-unused-vars
+  }))
+// UserModel.volatile
+// eslint-disable-line @typescript-eslint/no-unused-vars
 
 export interface User extends Instance<typeof UserModel> {}
 export interface UserSnapshotOut extends SnapshotOut<typeof UserModel> {}

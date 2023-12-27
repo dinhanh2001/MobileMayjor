@@ -14,15 +14,7 @@ import {
 } from "react-native"
 import { StackScreenProps } from "@react-navigation/stack"
 import { AppStackScreenProps } from "../navigators"
-import {
-  Screen,
-  Text,
-  Maps,
-  Pressable,
-  ButtonDisabled,
-  ToastMessage,
-  ModalLoader,
-} from "../components"
+import { Screen, Text, Maps, ToastMessage, ModalLoader } from "../components"
 import { useStores } from "../models"
 import { Modal, Button, VStack, useToast, HStack, Box } from "native-base"
 import { getCurrentPosition } from "../utils/gps"
@@ -53,6 +45,9 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
     const [address, setAddress] = React.useState<object>({})
     const [networkInfo, setNetworkInfo] = React.useState<object>({})
     const [isLoading, setLoading] = React.useState<boolean>(false)
+    const [statusCheckIn, setStatusCheckIn] = React.useState<"in" | "out">(null)
+    const [isModalCheckIn, setIsModalCheckIn] = React.useState<boolean>(false)
+    const [idPlace, setIdPlace] = React.useState<string | null>("")
     const {
       placeStore: {
         getAnPlace,
@@ -60,15 +55,15 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
         place,
         getAllPlace,
         listPlaces,
-        countChecked,
-        numberPlace,
+        // countChecked,
+        // numberPlace,
       },
       timesheetStore: { createTimesheet },
-      userStore: { role },
+      userStore: { role, checkInStatus, setDateLastCheckIn, setCheckIn },
     } = useStores()
-    const [active, setIsActive] = React.useState(1)
     const toast = useToast()
     const netInfo = useNetInfo()
+    console.log(checkInStatus)
     // Hiển thị thông báo
     const showToast = (result: object, message: string, errMessage: string) => {
       if (result["kind"] == "ok") {
@@ -90,9 +85,9 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
 
     // Lắng nghe khi thay đổi state
     React.useEffect(() => {
-      // console.log("show hàng!")
-      // console.log("QR Screen UseEffect isShowModal: ", isShowModal)
-    }, [isShowModal])
+      console.log("useFeect")
+      setDateLastCheckIn()
+    }, [])
 
     // Khi quét QR thành công!
     const onSuccess = useCallback(
@@ -143,9 +138,10 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
 
     // Khi xác nhận quét cham cong
     const onCheckin = useCallback(async () => {
+      setCheckIn("out")
       setLoading(true)
       const dataPost = {
-        name: `Bắt đầu chấm công tại ${place.name}`,
+        name: `Đã chấm vào tại ${place.name}`,
         lat: location["latitude"],
         long: location["longitude"],
         target: place["id"],
@@ -156,14 +152,15 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
       const result = await createTimesheet(dataPost)
       setLoading(false)
       setShowModal(false)
-      showToast(result, `Bắt đầu chấm công tại ${place.name}`, "")
+      showToast(result, `Đã chấm vào tại ${place.name}`, "")
       await getAllPlace()
     }, [setLoading, setShowModal, showToast, getAllPlace])
     // Khi xác nhận quét kết thúc Cham cong
     const onCheckout = useCallback(async () => {
+      setCheckIn("in")
       setLoading(true)
       const dataPost = {
-        name: `Kết thúc chấm công tại ${place.name}`,
+        name: `Đã chấm ra tại ${place.name}`,
         lat: location["latitude"],
         long: location["longitude"],
         target: place["id"],
@@ -176,7 +173,7 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
       setShowModal(false)
       showToast(
         result,
-        `Kết thúc tuần tại ${place.name}`,
+        `Kết thúc chấm ra tại ${place.name}`,
         "Vui lòng kiểm tra các điều kiện trước khi thực hiện!",
       )
       await getAllPlace()
@@ -200,165 +197,47 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
       showToast(result, `Cập nhật thành công!`, `Cập nhật thất bại!`)
     }, [setLoading, updatePlace, setChange])
 
-    const renderItem = useCallback(
-      ({ item }: any) => {
-        switch (active) {
-          case 1:
-            return (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => {
-                  onSuccess(item.id)
-                }}
-                style={{
-                  marginVertical: 2,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#CCCCCC",
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Entypo name="location" size={20} color="black" />
-                  <View style={{ marginLeft: 4 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700" }}>{item.name}</Text>
-                    <Text style={{ fontSize: 12 }}>{item.address}</Text>
-                  </View>
-                </View>
-                {item.status == "out" ? (
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      backgroundColor: "#854d0e",
-                      borderRadius: 20,
-                    }}
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      backgroundColor: "#0284c7",
-                      borderRadius: 20,
-                    }}
-                  />
-                )}
-              </TouchableOpacity>
-            )
-          case 2:
-            return item["status"] === "out" ? (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => {
-                  onSuccess(item.id)
-                }}
-                style={{
-                  marginVertical: 2,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#CCCCCC",
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Entypo name="location" size={20} color="black" />
-                  <View style={{ marginLeft: 4 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700" }}>{item.name}</Text>
-                    <Text style={{ fontSize: 12 }}>{item.address}</Text>
-                  </View>
-                </View>
-                {item.status == "out" ? (
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      backgroundColor: "#854d0e",
-                      borderRadius: 20,
-                    }}
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      backgroundColor: "#0284c7",
-                      borderRadius: 20,
-                    }}
-                  />
-                )}
-              </TouchableOpacity>
-            ) : null
-          case 3:
-            return item["status"] === "in" ? (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => {
-                  onSuccess(item.id)
-                }}
-                style={{
-                  marginVertical: 2,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  borderBottomWidth: 1,
-                  borderBottomColor: "#CCCCCC",
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Entypo name="location" size={20} color="black" />
-                  <View style={{ marginLeft: 4 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700" }}>{item.name}</Text>
-                    <Text style={{ fontSize: 12 }}>{item.address}</Text>
-                  </View>
-                </View>
-                {item.status == "out" ? (
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      backgroundColor: "#854d0e",
-                      borderRadius: 20,
-                    }}
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      backgroundColor: "#0284c7",
-                      borderRadius: 20,
-                    }}
-                  />
-                )}
-              </TouchableOpacity>
-            ) : null
-          default:
-            return null
-        }
-      },
-      [active],
-    )
+    const renderItem = useCallback(({ item }: any) => {
+      return (
+        <TouchableOpacity
+          key={item.id}
+          onPress={() => {
+            onSuccess(item.id)
+          }}
+          style={{
+            marginVertical: 2,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottomWidth: 1,
+            borderBottomColor: "#CCCCCC",
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Entypo name="location" size={20} color="black" />
+            <View style={{ marginLeft: 4 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700" }}>{item.name}</Text>
+              <Text style={{ fontSize: 12 }}>{item.address}</Text>
+            </View>
+          </View>
+
+          <View
+            style={{
+              width: 10,
+              height: 10,
+              backgroundColor: "#0284c7",
+              borderRadius: 20,
+            }}
+          />
+        </TouchableOpacity>
+      )
+    }, [])
     return (
       <Screen preset="fixed" style={{ paddingTop: 50, backgroundColor: "white", flex: 1 }}>
         <View style={{ marginHorizontal: 20 }}>
@@ -367,42 +246,43 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
             tx="QRScreen.currentListPlaces"
           />
           <ModalLoader caption={false} loading={isLoading} />
-          <View style={{ display: "flex", flexDirection: "row", marginBottom: 10 }}>
-            <TouchableOpacity
-              onPress={() => {
-                setIsActive(1)
-              }}
-              style={1 === active ? styles.tabActiveOn : styles.tabActiveOff}
-            >
-              <Text tx="QRScreen.allPlacesCheck" />
-              <Text style={1 === active ? styles.numberActiveOn : styles.numberActiveOff}>
-                {numberPlace}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                setIsActive(2)
-              }}
-              style={2 === active ? styles.tabActiveOn : styles.tabActiveOff}
-            >
-              <Text tx="QRScreen.placesUncheck" />
-              <Text style={2 === active ? styles.numberActiveOn : styles.numberActiveOff}>
-                {numberPlace - countChecked}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                setIsActive(3)
-              }}
-              style={3 === active ? styles.tabActiveOn : styles.tabActiveOff}
-            >
-              <Text tx="QRScreen.placesChecked" />
-              <Text style={3 === active ? styles.numberActiveOn : styles.numberActiveOff}>
-                {countChecked}
-              </Text>
-            </TouchableOpacity>
-          </View>
           <FlatList data={[...listPlaces]} renderItem={renderItem} />
+          <Modal
+            isOpen={isModalCheckIn}
+            onClose={() => {
+              setIsModalCheckIn(false)
+            }}
+            size={"full"}
+            // height={"100%"}
+          >
+            <Modal.Content>
+              <Modal.CloseButton />
+              <Modal.Header>{"Chọn trạng thái chấm"}</Modal.Header>
+              <Modal.Body>
+                <Text
+                  style={{ marginBottom: 10 }}
+                  onPress={() => {
+                    // setStatusCheckIn("in")
+                    console.log(idPlace)
+                    onSuccess(idPlace)
+                    setIsModalCheckIn(false)
+                  }}
+                >
+                  Chấm vào
+                </Text>
+                <Text
+                  onPress={() => {
+                    // setStatusCheckIn("out")
+                    console.log(idPlace)
+                    onSuccess(idPlace)
+                    setIsModalCheckIn(false)
+                  }}
+                >
+                  Chấm ra
+                </Text>
+              </Modal.Body>
+            </Modal.Content>
+          </Modal>
           {isShowModal && place.lat && (
             <>
               <Modal
@@ -508,25 +388,15 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
                       >
                         <Text tx="common.cancel" />
                       </Button>
-                      {place.status === "in" ? (
-                        // <Pressable w={[48, 48, 72]} text="Kết thúc chấm công" />
+                      {/* {place.status === "in" ? ( */}
+                      {checkInStatus === "out" ? (
                         <>
                           {timeCheck["pass"] && networkInfo["pass"] && address["pass"] ? (
-                            <Button
-                              onPress={async () => {
-                                await onCheckout()
-                              }}
-                              w={[48, 48, 72]}
-                              // text="Kết thúc chấm công!"
-                            >
+                            <Button onPress={onCheckout} w={[48, 48, 72]}>
                               <Text tx="QRScreen.endPatrol" />
                             </Button>
                           ) : (
-                            <Button
-                              isDisabled
-                              w={[48, 48, 72]}
-                              // text="Kết thúc chấm công!"
-                            >
+                            <Button isDisabled w={[48, 48, 72]}>
                               <Text tx="QRScreen.endPatrol" />
                             </Button>
                           )}
@@ -535,21 +405,11 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
                         // <Pressable w={[48, 48, 72]} text="Bắt đầu chấm công" />
                         <>
                           {timeCheck["pass"] && networkInfo["pass"] && address["pass"] ? (
-                            <Button
-                              onPress={async () => {
-                                await onCheckin()
-                              }}
-                              w={[48, 48, 72]}
-                              // text="Bắt đầu chấm công!"
-                            >
+                            <Button onPress={onCheckin} w={[48, 48, 72]}>
                               <Text tx="QRScreen.startPatrol" />
                             </Button>
                           ) : (
-                            <Button
-                              isDisabled={true}
-                              w={[48, 48, 72]}
-                              // text="Bắt đầu chấm công!"
-                            >
+                            <Button isDisabled={true} w={[48, 48, 72]}>
                               <Text tx="QRScreen.startPatrol" />
                             </Button>
                           )}
@@ -561,11 +421,6 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
               </Modal>
             </>
           )}
-
-          {/* Giao diện QR code  */}
-          {/* {!isShowModal && <ScanQrCode onPassing={onSuccess} />} */}
-
-          {/* Mô đan thay đổi thông tin địa điểm :D */}
           {isChange && (
             <Modal
               isOpen={isChange}
@@ -613,11 +468,7 @@ export const QrScreen: FC<StackScreenProps<AppStackScreenProps, "Qr">> = observe
                     >
                       <Text tx="common.cancel" />
                     </Button>
-                    <Button
-                      onPressIn={() => {
-                        onUpdatePlace()
-                      }}
-                    >
+                    <Button onPressIn={onUpdatePlace}>
                       <Text style={{ color: "white" }} tx="common.update" />
                     </Button>
                   </Button.Group>

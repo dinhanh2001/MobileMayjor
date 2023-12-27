@@ -19,7 +19,7 @@ export const apiMain = create({
   },
 })
 apiMain?.addAsyncResponseTransform(async (response) => {
-  if (response?.status) {
+  if (response?.status === 401) {
     console.log("author 401")
   }
 })
